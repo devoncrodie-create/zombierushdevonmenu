@@ -3,21 +3,16 @@ local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-
 local player = Players.LocalPlayer
 
 --// State
-local hitboxEnabled = false
-local followEnabled = false
-local flyEnabled = false
-local noclipEnabled = false
+local hitboxEnabled, followEnabled, flyEnabled, noclipEnabled = false, false, false, false
 local menuOpen = true
 local lastClickTime = 0
 local followSpeed = 0.15
 local followOffset = 1
 local hitboxSize = Vector3.new(20,20,20)
 local flySpeed = 50
-
 local char, humRoot, humanoid, bodyVel, bodyGyro
 
 -- Handle respawn
@@ -28,7 +23,6 @@ local function onCharacterAdded(character)
     if bodyVel then bodyVel:Destroy(); bodyVel=nil end
     if bodyGyro then bodyGyro:Destroy(); bodyGyro=nil end
 end
-
 char = player.Character or player.CharacterAdded:Wait()
 onCharacterAdded(char)
 player.CharacterAdded:Connect(onCharacterAdded)
@@ -47,7 +41,7 @@ frame.Position = UDim2.new(0.05,0,0.05,0)
 frame.BackgroundColor3 = Color3.fromRGB(40,40,40)
 frame.BorderSizePixel = 0
 frame.Parent = screenGui
-frame.Active = false -- don't block input
+frame.Active = false
 
 -- Drag frame
 local dragFrame = Instance.new("Frame")
@@ -152,10 +146,9 @@ local function createSlider(labelText, posY, minVal, maxVal, isSpeed)
     return label, sliderFrame, knob, fill
 end
 
--- Create sliders
-local speedLabel, speedFrame, speedKnob, speedFill = createSlider("Follow Speed: 0.15", 240, 0.05, 0.5, true)
-local heightLabel, heightFrame, heightKnob, heightFill = createSlider("Follow Height: 1", 280, 1, 100, false)
-local sizeLabel, sizeFrame, sizeKnob, sizeFill = createSlider("Hitbox Size: 20", 320, 5, 100, false)
+local speedLabel, speedFrame = createSlider("Follow Speed: 0.15", 240, 0.05, 0.5, true)
+local heightLabel, heightFrame = createSlider("Follow Height: 1", 280, 1, 100, false)
+local sizeLabel, sizeFrame = createSlider("Hitbox Size: 20", 320, 5, 100, false)
 
 -- Collapse/expand
 local function collapseMenu()
@@ -213,7 +206,7 @@ titleLabel.InputBegan:Connect(function(input)
     end
 end)
 
--- Button logic
+-- Update button colors
 local function updateButton(btn,state,name)
     btn.Text = name..(state and ": ON" or ": OFF")
     btn.BackgroundColor3 = state and Color3.fromRGB(0,200,0) or Color3.fromRGB(200,0,0)
@@ -236,5 +229,117 @@ noclipButton.MouseButton1Click:Connect(function()
     updateButton(noclipButton,noclipEnabled,"NoClip")
 end)
 
--- [The rest of your hitbox, follow, fly, noclip logic remains the same]
+--// Keys for fly
+local keys = {W=false,A=false,S=false,D=false,Space=false,LeftShift=false}
+UserInputService.InputBegan:Connect(function(input,gp)
+    if not gp then
+        if input.KeyCode==Enum.KeyCode.W then keys.W=true end
+        if input.KeyCode==Enum.KeyCode.A then keys.A=true end
+        if input.KeyCode==Enum.KeyCode.S then keys.S=true end
+        if input.KeyCode==Enum.KeyCode.D then keys.D=true end
+        if input.KeyCode==Enum.KeyCode.Space then keys.Space=true end
+        if input.KeyCode==Enum.KeyCode.LeftShift then keys.LeftShift=true end
+    end
+end)
+UserInputService.InputEnded:Connect(function(input)
+    if input.KeyCode==Enum.KeyCode.W then keys.W=false end
+    if input.KeyCode==Enum.KeyCode.A then keys.A=false end
+    if input.KeyCode==Enum.KeyCode.S then keys.S=false end
+    if input.KeyCode==Enum.KeyCode.D then keys.D=false end
+    if input.KeyCode==Enum.KeyCode.Space then keys.Space=false end
+    if input.KeyCode==Enum.KeyCode.LeftShift then keys.LeftShift=false end
+end)
 
+--// Zombie Storage (Hitbox + Follow)
+local zombieStorage = workspace:WaitForChild("Zombie Storage")
+
+RunService.RenderStepped:Connect(function()
+    -- Fly
+    if flyEnabled and humRoot then
+        if not bodyVel then
+            bodyVel = Instance.new("BodyVelocity")
+            bodyVel.MaxForce = Vector3.new(1e5,1e5,1e5)
+            bodyVel.Parent = humRoot
+        end
+        if not bodyGyro then
+            bodyGyro = Instance.new("BodyGyro")
+            bodyGyro.MaxTorque = Vector3.new(1e5,1e5,1e5)
+            bodyGyro.Parent = humRoot
+        end
+
+        local cam = workspace.CurrentCamera
+        local lookVector = cam.CFrame.LookVector
+        local rightVector = cam.CFrame.RightVector
+        local moveDir = Vector3.new(0,0,0)
+        if keys.W then moveDir = moveDir + lookVector end
+        if keys.S then moveDir = moveDir - lookVector end
+        if keys.A then moveDir = moveDir - rightVector end
+        if keys.D then moveDir = moveDir + rightVector end
+        if keys.Space then moveDir = moveDir + Vector3.new(0,1,0) end
+        if keys.LeftShift then moveDir = moveDir - Vector3.new(0,1,0) end
+        if moveDir.Magnitude>0 then moveDir=moveDir.Unit*flySpeed else moveDir=Vector3.new(0,0,0) end
+        bodyVel.Velocity=moveDir
+        bodyGyro.CFrame=CFrame.new(humRoot.Position, humRoot.Position + cam.CFrame.LookVector)
+    else
+        if bodyVel then bodyVel:Destroy(); bodyVel=nil end
+        if bodyGyro then bodyGyro:Destroy(); bodyGyro=nil end
+    end
+
+    -- NoClip
+    if char then
+        for _, p in ipairs(char:GetDescendants()) do
+            if p:IsA("BasePart") then p.CanCollide = not noclipEnabled end
+        end
+    end
+
+    -- Follow nearest zombie
+    if followEnabled and humRoot then
+        local closestZombie, closestDist = nil, math.huge
+        for _, z in ipairs(zombieStorage:GetChildren()) do
+            local hrp = z:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                local dist = (hrp.Position - humRoot.Position).Magnitude
+                if dist < closestDist then
+                    closestDist = dist
+                    closestZombie = hrp
+                end
+            end
+        end
+        if closestZombie then
+            humRoot.CFrame = humRoot.CFrame:Lerp(
+                CFrame.new(closestZombie.Position + Vector3.new(0, followOffset, 0)),
+                followSpeed
+            )
+        end
+    end
+
+    -- Hitbox
+    for _, z in ipairs(zombieStorage:GetChildren()) do
+        local hrp = z:FindFirstChild("HumanoidRootPart")
+        local hum = z:FindFirstChildWhichIsA("Humanoid")
+        if hrp and hum then
+            local hb = z:FindFirstChild("ZombieHitbox")
+            if hitboxEnabled then
+                if not hb then
+                    hb = Instance.new("Part")
+                    hb.Name = "ZombieHitbox"
+                    hb.Anchored = true
+                    hb.CanCollide = false
+                    hb.Transparency = 0.5
+                    hb.BrickColor = BrickColor.new("Really red")
+                    hb.Size = hitboxSize
+                    hb.Parent = z
+                    hb.Touched:Connect(function(hit)
+                        if hit.Parent == char or hit.Parent:FindFirstChildWhichIsA("Tool") then
+                            hum:TakeDamage(1)
+                        end
+                    end)
+                end
+                hb.Size = hitboxSize
+                hb.CFrame = hrp.CFrame
+            elseif hb then
+                hb:Destroy()
+            end
+        end
+    end
+end)
