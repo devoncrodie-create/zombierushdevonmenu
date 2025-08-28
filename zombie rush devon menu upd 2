@@ -44,7 +44,7 @@ screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 local frame = Instance.new("Frame")
 frame.Size = UDim2.new(0,200,0,450)
 frame.Position = UDim2.new(0.05,0,0.05,0)
-frame.BackgroundColor3 = Color3.fromRGB(30,30,50) -- Dark bluish
+frame.BackgroundColor3 = Color3.fromRGB(30,30,50)
 frame.BorderSizePixel = 0
 frame.Active = true
 frame.Draggable = true
@@ -54,7 +54,7 @@ frame.Parent = screenGui
 local titleLabel = Instance.new("TextLabel")
 titleLabel.Size = UDim2.new(0,200,0,30)
 titleLabel.Position = UDim2.new(0,0,0,0)
-titleLabel.BackgroundColor3 = Color3.fromRGB(70,70,90) -- Slightly lighter
+titleLabel.BackgroundColor3 = Color3.fromRGB(70,70,90)
 titleLabel.TextColor3 = Color3.fromRGB(255,255,255)
 titleLabel.Font = Enum.Font.SourceSansBold
 titleLabel.TextScaled = true
@@ -67,7 +67,7 @@ local function createButton(name,posY)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(0,180,0,40)
     btn.Position = UDim2.new(0,10,0,posY)
-    btn.BackgroundColor3 = Color3.fromRGB(100,0,150) -- purple-ish
+    btn.BackgroundColor3 = Color3.fromRGB(100,0,150)
     btn.TextColor3 = Color3.fromRGB(255,255,255)
     btn.Text = name
     btn.Parent = frame
@@ -80,24 +80,24 @@ local flyButton = createButton("Fly: OFF",140)
 local noclipButton = createButton("NoClip: OFF",190)
 
 --// Slider
-local function createSlider(labelText,posY,minVal,maxVal,isSpeedOrHitboxOrFollow)
+local function createSlider(labelText,posY,minVal,maxVal,type)
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(0,180,0,30)
     label.Position = UDim2.new(0,10,0,posY)
     label.BackgroundTransparency = 1
-    label.TextColor3 = Color3.fromRGB(220,220,220) -- soft white
+    label.TextColor3 = Color3.fromRGB(220,220,220)
     label.Text = labelText
     label.Parent = frame
 
     local sliderFrame = Instance.new("Frame")
     sliderFrame.Size = UDim2.new(0,180,0,20)
     sliderFrame.Position = UDim2.new(0,10,0,posY+30)
-    sliderFrame.BackgroundColor3 = Color3.fromRGB(60,60,80) -- dark slider background
+    sliderFrame.BackgroundColor3 = Color3.fromRGB(60,60,80)
     sliderFrame.Parent = frame
 
     local fill = Instance.new("Frame")
     fill.Size = UDim2.new(0,0,1,0)
-    fill.BackgroundColor3 = Color3.fromRGB(200,100,255) -- bright purple fill
+    fill.BackgroundColor3 = Color3.fromRGB(200,100,255)
     fill.Parent = sliderFrame
 
     local knob = Instance.new("TextButton")
@@ -111,10 +111,7 @@ local function createSlider(labelText,posY,minVal,maxVal,isSpeedOrHitboxOrFollow
     local dragging = false
     local value = minVal
 
-    knob.MouseButton1Down:Connect(function()
-        dragging = true
-    end)
-
+    knob.MouseButton1Down:Connect(function() dragging = true end)
     UserInputService.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
     end)
@@ -125,13 +122,13 @@ local function createSlider(labelText,posY,minVal,maxVal,isSpeedOrHitboxOrFollow
             fill.Size = UDim2.new(0,mouseX,1,0)
             knob.Position = UDim2.new(0,mouseX-knob.AbsoluteSize.X/2,0,0)
             value = minVal + (mouseX / sliderFrame.AbsoluteSize.X) * (maxVal - minVal)
-            if isSpeedOrHitboxOrFollow == "speed" then
+            if type=="speed" then
                 followSpeed = value
                 label.Text = "Follow Speed: "..string.format("%.2f",followSpeed)
-            elseif isSpeedOrHitboxOrFollow == "hitbox" then
+            elseif type=="hitbox" then
                 hitboxSize = Vector3.new(value,value,value)
                 label.Text = "Hitbox Size: "..string.format("%.1f",value)
-            elseif isSpeedOrHitboxOrFollow == "offset" then
+            elseif type=="offset" then
                 followOffset = value
                 label.Text = "Follow Height: "..string.format("%.1f",followOffset)
             end
@@ -145,3 +142,82 @@ end
 local speedLabel,speedSlider,speedKnob,speedFill = createSlider("Follow Speed: 0.15",240,0.05,0.55,"speed")
 local hitboxSizeLabel,hitboxSlider,hitboxKnob,hitboxFill = createSlider("Hitbox Size: 20",300,5,55,"hitbox")
 local followHeightLabel,followHeightSlider,followHeightKnob,followHeightFill = createSlider("Follow Height: 1",360,1,100,"offset")
+
+--// Menu toggle
+local function collapseMenu()
+    hitboxButton.Visible=false
+    followButton.Visible=false
+    flyButton.Visible=false
+    noclipButton.Visible=false
+    speedLabel.Visible=false
+    speedSlider.Visible=false
+    hitboxSizeLabel.Visible=false
+    hitboxSlider.Visible=false
+    followHeightLabel.Visible=false
+    followHeightSlider.Visible=false
+    TweenService:Create(frame,TweenInfo.new(0.3),{Size=UDim2.new(0,200,0,30)}):Play()
+    hitboxEnabled=false
+    followEnabled=false
+    flyEnabled=false
+    noclipEnabled=false
+end
+
+local function expandMenu()
+    hitboxButton.Visible=true
+    followButton.Visible=true
+    flyButton.Visible=true
+    noclipButton.Visible=true
+    speedLabel.Visible=true
+    speedSlider.Visible=true
+    hitboxSizeLabel.Visible=true
+    hitboxSlider.Visible=true
+    followHeightLabel.Visible=true
+    followHeightSlider.Visible=true
+    TweenService:Create(frame,TweenInfo.new(0.3),{Size=UDim2.new(0,200,0,450)}):Play()
+end
+
+titleLabel.InputBegan:Connect(function(input)
+    if input.UserInputType==Enum.UserInputType.MouseButton1 then
+        local now=tick()
+        if now-lastClickTime<0.3 then
+            if menuOpen then collapseMenu() else expandMenu() end
+            menuOpen = not menuOpen
+        end
+        lastClickTime = now
+    end
+end)
+
+--// Button Logic
+local function updateButton(btn,state,name)
+    btn.Text=name..(state and ": ON" or ": OFF")
+    btn.BackgroundColor3=state and Color3.fromRGB(0,200,0) or Color3.fromRGB(100,0,150)
+end
+
+hitboxButton.MouseButton1Click:Connect(function()
+    hitboxEnabled=not hitboxEnabled
+    updateButton(hitboxButton,hitboxEnabled,"Hitbox")
+end)
+followButton.MouseButton1Click:Connect(function()
+    followEnabled=not followEnabled
+    updateButton(followButton,followEnabled,"Follow")
+end)
+flyButton.MouseButton1Click:Connect(function()
+    flyEnabled=not flyEnabled
+    updateButton(flyButton,flyEnabled,"Fly")
+end)
+noclipButton.MouseButton1Click:Connect(function()
+    noclipEnabled=not noclipEnabled
+    updateButton(noclipButton,noclipEnabled,"NoClip")
+end)
+
+--// Hitbox logic
+local zombieStorage = workspace:WaitForChild("Zombie Storage")
+local function updateHitbox(zombie)
+    local hrp = zombie:FindFirstChild("HumanoidRootPart")
+    local hum = zombie:FindFirstChildWhichIsA("Humanoid")
+    if hrp and hum then
+        if hitboxEnabled then
+            local hb = zombie:FindFirstChild("ZombieHitbox")
+            if not hb then
+                hb=Instance.new("Part")
+                hb
