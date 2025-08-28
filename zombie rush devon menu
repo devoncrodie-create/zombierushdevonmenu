@@ -1,6 +1,7 @@
 --// Services
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -8,7 +9,7 @@ local char = player.Character or player.CharacterAdded:Wait()
 local humRoot = char:WaitForChild("HumanoidRootPart")
 
 --// Settings
-local zombieStorage = workspace:WaitForChild("Zombie Storage")
+local zombieStorage = workspace:WaitForChild("ZombieStorage")
 local followOffset = 1 -- studs above zombie
 local followSpeed = 0.15
 
@@ -24,7 +25,7 @@ screenGui.Parent = playerGui
 
 -- Main frame
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 200, 0, 250)
+frame.Size = UDim2.new(0, 200, 0, 280)
 frame.Position = UDim2.new(0.05,0,0.05,0)
 frame.BackgroundColor3 = Color3.fromRGB(40,40,40)
 frame.BorderSizePixel = 0
@@ -159,7 +160,7 @@ end
 -- Move above zombie
 local function moveAboveZombie(model)
 	if followEnabled and model and model:FindFirstChild("HumanoidRootPart") then
-		moveSmoothly(model.HumanoidRootPart.CFrame * CFrame.new(0, followOffset, 0))
+		moveSmoothly(model.HumanoidRootPart.CFrame * CFrame.new(0, 1, 0))
 	end
 end
 
@@ -177,8 +178,8 @@ local function updateHitbox(zombie)
 				hitbox.CanCollide = false
 				hitbox.Transparency = 0.5
 				hitbox.BrickColor = BrickColor.new("Really red")
-				hitbox.Parent = zombie -- <-- parent to model (Humanoid)
-				
+				hitbox.Parent = zombie
+
 				-- Forward hits to Humanoid
 				hitbox.Touched:Connect(function(hit)
 					if humanoid and hit.Parent:FindFirstChildWhichIsA("Tool") then
