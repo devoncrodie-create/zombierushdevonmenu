@@ -1,12 +1,11 @@
 --// Services
 local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 
 --// State
-local hitboxEnabled, followEnabled, flyEnabled, noclipEnabled = false, false, false, false
+local hitboxEnabled, followEnabled, flyEnabled, noclipEnabled, rapidFireEnabled = false, false, false, false, false
 local menuOpen = true
 local lastClickTime = 0
 local followSpeed = 0.15
@@ -36,16 +35,14 @@ screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
 -- Main frame
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 220, 0, 400)
+frame.Size = UDim2.new(0, 220, 0, 440)
 frame.Position = UDim2.new(0.05,0,0.05,0)
 frame.BackgroundColor3 = Color3.fromRGB(40,40,40)
 frame.BorderSizePixel = 0
 frame.Parent = screenGui
-frame.Active = true
-frame.Draggable = true -- ✅ drag whole UI
 
--- Title
-local titleLabel = Instance.new("TextButton") -- changed to button so it’s clickable
+-- Title (TextButton for dragging & double click)
+local titleLabel = Instance.new("TextButton")
 titleLabel.Size = UDim2.new(1,0,0,30)
 titleLabel.BackgroundColor3 = Color3.fromRGB(50,50,50)
 titleLabel.TextColor3 = Color3.new(1,1,1)
@@ -57,42 +54,67 @@ titleLabel.ZIndex = 25
 
 -- Collapse / Expand menu
 local function resetCheats()
-    hitboxEnabled, followEnabled, flyEnabled, noclipEnabled = false, false, false, false
+    hitboxEnabled, followEnabled, flyEnabled, noclipEnabled, rapidFireEnabled = false, false, false, false, false
 end
-
 local function setMenuState(open)
     menuOpen = open
     if open then
-        frame.Size = UDim2.new(0, 220, 0, 400)
+        frame.Size = UDim2.new(0, 220, 0, 440)
     else
-        frame.Size = UDim2.new(0, 220, 0, 30) -- only title visible
+        frame.Size = UDim2.new(0, 220, 0, 30)
         resetCheats()
     end
-
     for _, child in ipairs(frame:GetChildren()) do
         if child ~= titleLabel then
             child.Visible = open
         end
     end
 end
-
+local lastClickTime = 0
 titleLabel.MouseButton1Click:Connect(function()
     local now = tick()
-    if now - lastClickTime < 0.3 then -- double click
+    if now - lastClickTime < 0.3 then
         setMenuState(not menuOpen)
     end
     lastClickTime = now
 end)
-
--- Start expanded
 setMenuState(true)
 
+--✅ Proper draggable menu
+local dragging, dragStart, startPos, dragInput = false, nil, nil, nil
+titleLabel.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = frame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+titleLabel.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        dragInput = input
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and input == dragInput then
+        local delta = input.Position - dragStart
+        frame.Position = UDim2.new(
+            startPos.X.Scale, startPos.X.Offset + delta.X,
+            startPos.Y.Scale, startPos.Y.Offset + delta.Y
+        )
+    end
+end)
+
 -- Buttons
-local function createButton(name, posY)
+local function createButton(name, posY, color)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(0,180,0,40)
     btn.Position = UDim2.new(0,20,0,posY)
-    btn.BackgroundColor3 = Color3.fromRGB(200,0,0)
+    btn.BackgroundColor3 = color or Color3.fromRGB(200,0,0)
     btn.TextColor3 = Color3.new(1,1,1)
     btn.Text = name
     btn.Parent = frame
@@ -100,12 +122,12 @@ local function createButton(name, posY)
     return btn
 end
 
-local hitboxButton = createButton("Hitbox: OFF", 40)
-local followButton = createButton("Follow: OFF", 90)
-local flyButton = createButton("Fly: OFF", 140)
-local noclipButton = createButton("NoClip: OFF", 190)
-local killAllButton = createButton("Kill All Zombies", 240)
-killAllButton.BackgroundColor3 = Color3.fromRGB(255,165,0) -- orange
+local hitboxButton    = createButton("Hitbox: OFF", 40)
+local followButton    = createButton("Follow: OFF", 90)
+local flyButton       = createButton("Fly: OFF", 140)
+local noclipButton    = createButton("NoClip: OFF", 190)
+local killAllButton   = createButton("Kill All Zombies", 240, Color3.fromRGB(255,165,0))
+local rapidFireButton = createButton("Rapid Fire: OFF", 290)
 
 -- Sliders
 local function createSlider(labelText, posY, minVal, maxVal, isSpeed)
@@ -168,9 +190,9 @@ local function createSlider(labelText, posY, minVal, maxVal, isSpeed)
     end)
 end
 
-createSlider("Follow Speed: 0.15", 280, 0.05, 0.5, true)
-createSlider("Follow Height: 1", 320, 1, 100, false)
-createSlider("Hitbox Size: 20", 360, 5, 100, false)
+createSlider("Follow Speed: 0.15", 340, 0.05, 0.5, true)
+createSlider("Follow Height: 1", 380, 1, 100, false)
+createSlider("Hitbox Size: 20", 420, 5, 100, false)
 
 -- Update button colors
 local function updateButton(btn,state,name)
@@ -200,13 +222,36 @@ killAllButton.MouseButton1Click:Connect(function()
         for _, z in ipairs(zombieStorage:GetChildren()) do
             local hum = z:FindFirstChildWhichIsA("Humanoid")
             if hum and hum.Health > 0 then
-                hum:TakeDamage(9999) -- ✅ ensures you get XP
+                hum:TakeDamage(9999)
             end
         end
     end
 end)
+rapidFireButton.MouseButton1Click:Connect(function()
+    rapidFireEnabled = not rapidFireEnabled
+    updateButton(rapidFireButton, rapidFireEnabled, "Rapid Fire")
+end)
 
---// Fly keys
+--// Rapid Fire (ultra fast)
+local mouse = player:GetMouse()
+local firing = false
+mouse.Button1Down:Connect(function()
+    if rapidFireEnabled then
+        firing = true
+        while firing and rapidFireEnabled do
+            local tool = char:FindFirstChildOfClass("Tool")
+            if tool and tool:FindFirstChild("Handle") then
+                pcall(function() tool:Activate() end)
+            end
+            task.wait(0.01) -- ✅ extremely fast
+        end
+    end
+end)
+mouse.Button1Up:Connect(function()
+    firing = false
+end)
+
+--// Fly + Follow + NoClip + Hitbox logic
 local keys = {W=false,A=false,S=false,D=false,Space=false,LeftShift=false}
 UserInputService.InputBegan:Connect(function(input,gp)
     if not gp and keys[input.KeyCode.Name]~=nil then keys[input.KeyCode.Name]=true end
@@ -215,7 +260,6 @@ UserInputService.InputEnded:Connect(function(input)
     if keys[input.KeyCode.Name]~=nil then keys[input.KeyCode.Name]=false end
 end)
 
---// Zombie Storage (Hitbox + Follow)
 local zombieStorage = workspace:WaitForChild("Zombie Storage")
 
 RunService.RenderStepped:Connect(function()
@@ -296,7 +340,7 @@ RunService.RenderStepped:Connect(function()
                     hb.Parent = z
                     hb.Touched:Connect(function(hit)
                         if hit.Parent == char or hit.Parent:FindFirstChildWhichIsA("Tool") then
-                            hum:TakeDamage(5) -- ✅ damage counts for XP
+                            hum:TakeDamage(5)
                         end
                     end)
                 end
