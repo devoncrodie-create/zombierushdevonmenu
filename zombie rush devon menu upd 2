@@ -42,9 +42,9 @@ screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
 -- Main frame
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0,200,0,400)
+frame.Size = UDim2.new(0,200,0,450)
 frame.Position = UDim2.new(0.05,0,0.05,0)
-frame.BackgroundColor3 = Color3.fromRGB(40,40,40)
+frame.BackgroundColor3 = Color3.fromRGB(30,30,50) -- Dark bluish
 frame.BorderSizePixel = 0
 frame.Active = true
 frame.Draggable = true
@@ -54,8 +54,8 @@ frame.Parent = screenGui
 local titleLabel = Instance.new("TextLabel")
 titleLabel.Size = UDim2.new(0,200,0,30)
 titleLabel.Position = UDim2.new(0,0,0,0)
-titleLabel.BackgroundColor3 = Color3.fromRGB(60,60,60)
-titleLabel.TextColor3 = Color3.new(1,1,1)
+titleLabel.BackgroundColor3 = Color3.fromRGB(70,70,90) -- Slightly lighter
+titleLabel.TextColor3 = Color3.fromRGB(255,255,255)
 titleLabel.Font = Enum.Font.SourceSansBold
 titleLabel.TextScaled = true
 titleLabel.Text = "Devon's Menu (BETA)"
@@ -67,8 +67,8 @@ local function createButton(name,posY)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(0,180,0,40)
     btn.Position = UDim2.new(0,10,0,posY)
-    btn.BackgroundColor3 = Color3.fromRGB(200,0,0)
-    btn.TextColor3 = Color3.new(1,1,1)
+    btn.BackgroundColor3 = Color3.fromRGB(100,0,150) -- purple-ish
+    btn.TextColor3 = Color3.fromRGB(255,255,255)
     btn.Text = name
     btn.Parent = frame
     return btn
@@ -80,24 +80,24 @@ local flyButton = createButton("Fly: OFF",140)
 local noclipButton = createButton("NoClip: OFF",190)
 
 --// Slider
-local function createSlider(labelText,posY,minVal,maxVal,isSpeed)
+local function createSlider(labelText,posY,minVal,maxVal,isSpeedOrHitboxOrFollow)
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(0,180,0,30)
     label.Position = UDim2.new(0,10,0,posY)
     label.BackgroundTransparency = 1
-    label.TextColor3 = Color3.new(1,1,1)
+    label.TextColor3 = Color3.fromRGB(220,220,220) -- soft white
     label.Text = labelText
     label.Parent = frame
 
     local sliderFrame = Instance.new("Frame")
     sliderFrame.Size = UDim2.new(0,180,0,20)
     sliderFrame.Position = UDim2.new(0,10,0,posY+30)
-    sliderFrame.BackgroundColor3 = Color3.fromRGB(100,100,100)
+    sliderFrame.BackgroundColor3 = Color3.fromRGB(60,60,80) -- dark slider background
     sliderFrame.Parent = frame
 
     local fill = Instance.new("Frame")
     fill.Size = UDim2.new(0,0,1,0)
-    fill.BackgroundColor3 = Color3.fromRGB(0,200,0)
+    fill.BackgroundColor3 = Color3.fromRGB(200,100,255) -- bright purple fill
     fill.Parent = sliderFrame
 
     local knob = Instance.new("TextButton")
@@ -125,12 +125,15 @@ local function createSlider(labelText,posY,minVal,maxVal,isSpeed)
             fill.Size = UDim2.new(0,mouseX,1,0)
             knob.Position = UDim2.new(0,mouseX-knob.AbsoluteSize.X/2,0,0)
             value = minVal + (mouseX / sliderFrame.AbsoluteSize.X) * (maxVal - minVal)
-            if isSpeed then
+            if isSpeedOrHitboxOrFollow == "speed" then
                 followSpeed = value
                 label.Text = "Follow Speed: "..string.format("%.2f",followSpeed)
-            else
+            elseif isSpeedOrHitboxOrFollow == "hitbox" then
                 hitboxSize = Vector3.new(value,value,value)
                 label.Text = "Hitbox Size: "..string.format("%.1f",value)
+            elseif isSpeedOrHitboxOrFollow == "offset" then
+                followOffset = value
+                label.Text = "Follow Height: "..string.format("%.1f",followOffset)
             end
         end
     end)
@@ -139,201 +142,6 @@ local function createSlider(labelText,posY,minVal,maxVal,isSpeed)
 end
 
 -- Create sliders
-local speedLabel,speedSlider,speedKnob,speedFill = createSlider("Follow Speed: 0.15",240,0.05,0.55,true)
-local hitboxSizeLabel,hitboxSlider,hitboxKnob,hitboxFill = createSlider("Hitbox Size: 20",300,5,55,false)
-
---// Menu toggle
-local function collapseMenu()
-    hitboxButton.Visible = false
-    followButton.Visible = false
-    flyButton.Visible = false
-    noclipButton.Visible = false
-    speedLabel.Visible = false
-    speedSlider.Visible = false
-    hitboxSizeLabel.Visible = false
-    hitboxSlider.Visible = false
-
-    TweenService:Create(frame,TweenInfo.new(0.3),{Size=UDim2.new(0,200,0,30)}):Play()
-    hitboxEnabled = false
-    followEnabled = false
-    flyEnabled = false
-    noclipEnabled = false
-    hitboxButton.Text = "Hitbox: OFF"
-    followButton.Text = "Follow: OFF"
-    flyButton.Text = "Fly: OFF"
-    noclipButton.Text = "NoClip: OFF"
-end
-
-local function expandMenu()
-    hitboxButton.Visible = true
-    followButton.Visible = true
-    flyButton.Visible = true
-    noclipButton.Visible = true
-    speedLabel.Visible = true
-    speedSlider.Visible = true
-    hitboxSizeLabel.Visible = true
-    hitboxSlider.Visible = true
-
-    TweenService:Create(frame,TweenInfo.new(0.3),{Size=UDim2.new(0,200,0,400)}):Play()
-end
-
-titleLabel.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        local now = tick()
-        if now - lastClickTime < 0.3 then
-            if menuOpen then collapseMenu() else expandMenu() end
-            menuOpen = not menuOpen
-        end
-        lastClickTime = now
-    end
-end)
-
---// Button logic
-hitboxButton.MouseButton1Click:Connect(function()
-    hitboxEnabled = not hitboxEnabled
-    hitboxButton.Text = "Hitbox: "..(hitboxEnabled and "ON" or "OFF")
-end)
-
-followButton.MouseButton1Click:Connect(function()
-    followEnabled = not followEnabled
-    followButton.Text = "Follow: "..(followEnabled and "ON" or "OFF")
-end)
-
-flyButton.MouseButton1Click:Connect(function()
-    flyEnabled = not flyEnabled
-    flyButton.Text = "Fly: "..(flyEnabled and "ON" or "OFF")
-end)
-
-noclipButton.MouseButton1Click:Connect(function()
-    noclipEnabled = not noclipEnabled
-    noclipButton.Text = "NoClip: "..(noclipEnabled and "ON" or "OFF")
-end)
-
---// Hitbox logic
-local zombieStorage = workspace:WaitForChild("Zombie Storage")
-
-local function updateHitbox(zombie)
-    local hrp = zombie:FindFirstChild("HumanoidRootPart")
-    local hum = zombie:FindFirstChildWhichIsA("Humanoid")
-    if hrp and hum then
-        if hitboxEnabled then
-            local hb = zombie:FindFirstChild("ZombieHitbox")
-            if not hb then
-                hb = Instance.new("Part")
-                hb.Name = "ZombieHitbox"
-                hb.Anchored = true
-                hb.CanCollide = false
-                hb.Transparency = 0.5
-                hb.BrickColor = BrickColor.new("Really red")
-                hb.Size = hitboxSize
-                hb.Parent = zombie
-                hb.Touched:Connect(function(hit)
-                    local tool = char:FindFirstChildWhichIsA("Tool")
-                    if tool then
-                        hum:TakeDamage(1)
-                    end
-                end)
-            end
-            hb.Size = hitboxSize
-            hb.CFrame = hrp.CFrame
-        else
-            local existing = zombie:FindFirstChild("ZombieHitbox")
-            if existing then existing:Destroy() end
-        end
-    end
-end
-
-task.spawn(function()
-    while true do
-        for _,z in ipairs(zombieStorage:GetChildren()) do
-            updateHitbox(z)
-        end
-        task.wait(0.1)
-    end
-end)
-
---// Follow
-RunService.RenderStepped:Connect(function()
-    if followEnabled and humRoot then
-        local closestZombie
-        local closestDist = math.huge
-        for _,z in ipairs(zombieStorage:GetChildren()) do
-            local hrp = z:FindFirstChild("HumanoidRootPart")
-            if hrp then
-                local dist = (hrp.Position - humRoot.Position).Magnitude
-                if dist < closestDist then
-                    closestDist = dist
-                    closestZombie = hrp
-                end
-            end
-        end
-        if closestZombie then
-            humRoot.CFrame = humRoot.CFrame:Lerp(CFrame.new(closestZombie.Position + Vector3.new(0,followOffset,0)),followSpeed)
-        end
-    end
-end)
-
---// Fly & NoClip
-local keys = {W=false,A=false,S=false,D=false,Space=false,LeftShift=false}
-UserInputService.InputBegan:Connect(function(input,gp)
-    if not gp then
-        if input.KeyCode == Enum.KeyCode.W then keys.W = true end
-        if input.KeyCode == Enum.KeyCode.A then keys.A = true end
-        if input.KeyCode == Enum.KeyCode.S then keys.S = true end
-        if input.KeyCode == Enum.KeyCode.D then keys.D = true end
-        if input.KeyCode == Enum.KeyCode.Space then keys.Space = true end
-        if input.KeyCode == Enum.KeyCode.LeftShift then keys.LeftShift = true end
-    end
-end)
-
-UserInputService.InputEnded:Connect(function(input)
-    if input.KeyCode == Enum.KeyCode.W then keys.W = false end
-    if input.KeyCode == Enum.KeyCode.A then keys.A = false end
-    if input.KeyCode == Enum.KeyCode.S then keys.S = false end
-    if input.KeyCode == Enum.KeyCode.D then keys.D = false end
-    if input.KeyCode == Enum.KeyCode.Space then keys.Space = false end
-    if input.KeyCode == Enum.KeyCode.LeftShift then keys.LeftShift = false end
-end)
-
-RunService.RenderStepped:Connect(function(delta)
-    -- Fly
-    if flyEnabled and humRoot then
-        if not bodyVel then
-            bodyVel = Instance.new("BodyVelocity")
-            bodyVel.MaxForce = Vector3.new(1e5,1e5,1e5)
-            bodyVel.Parent = humRoot
-        end
-        if not bodyGyro then
-            bodyGyro = Instance.new("BodyGyro")
-            bodyGyro.MaxTorque = Vector3.new(1e5,1e5,1e5)
-            bodyGyro.Parent = humRoot
-        end
-        local cam = workspace.CurrentCamera
-        local lookVector = cam.CFrame.LookVector
-        local rightVector = cam.CFrame.RightVector
-        local moveDir = Vector3.new(0,0,0)
-        if keys.W then moveDir = moveDir + lookVector end
-        if keys.S then moveDir = moveDir - lookVector end
-        if keys.A then moveDir = moveDir - rightVector end
-        if keys.D then moveDir = moveDir + rightVector end
-        if keys.Space then moveDir = moveDir + Vector3.new(0,1,0) end
-        if keys.LeftShift then moveDir = moveDir - Vector3.new(0,1,0) end
-        if moveDir.Magnitude > 0 then moveDir = moveDir.Unit*flySpeed end
-        bodyVel.Velocity = moveDir
-        bodyGyro.CFrame = CFrame.new(humRoot.Position,humRoot.Position+cam.CFrame.LookVector)
-    else
-        if bodyVel then bodyVel:Destroy(); bodyVel=nil end
-        if bodyGyro then bodyGyro:Destroy(); bodyGyro=nil end
-    end
-
-    -- NoClip
-    if noclipEnabled and char then
-        for _,part in ipairs(char:GetDescendants()) do
-            if part:IsA("BasePart") then part.CanCollide = false end
-        end
-    else
-        for _,part in ipairs(char:GetDescendants()) do
-            if part:IsA("BasePart") then part.CanCollide = true end
-        end
-    end
-end)
+local speedLabel,speedSlider,speedKnob,speedFill = createSlider("Follow Speed: 0.15",240,0.05,0.55,"speed")
+local hitboxSizeLabel,hitboxSlider,hitboxKnob,hitboxFill = createSlider("Hitbox Size: 20",300,5,55,"hitbox")
+local followHeightLabel,followHeightSlider,followHeightKnob,followHeightFill = createSlider("Follow Height: 1",360,1,100,"offset")
