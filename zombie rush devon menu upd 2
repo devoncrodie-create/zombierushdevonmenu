@@ -41,35 +41,57 @@ frame.Position = UDim2.new(0.05,0,0.05,0)
 frame.BackgroundColor3 = Color3.fromRGB(40,40,40)
 frame.BorderSizePixel = 0
 frame.Parent = screenGui
-frame.Active = false
-
--- Drag frame
-local dragFrame = Instance.new("Frame")
-dragFrame.Size = UDim2.new(1,0,0,30)
-dragFrame.Position = UDim2.new(0,0,0,0)
-dragFrame.BackgroundTransparency = 1
-dragFrame.Parent = frame
-dragFrame.Active = true
-dragFrame.Draggable = true
-dragFrame.ZIndex = 20
+frame.Active = true
+frame.Draggable = true -- ✅ drag whole UI
 
 -- Title
-local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1,0,1,0)
-titleLabel.Position = UDim2.new(0,0,0,0)
-titleLabel.BackgroundTransparency = 1
+local titleLabel = Instance.new("TextButton") -- changed to button so it’s clickable
+titleLabel.Size = UDim2.new(1,0,0,30)
+titleLabel.BackgroundColor3 = Color3.fromRGB(50,50,50)
 titleLabel.TextColor3 = Color3.new(1,1,1)
 titleLabel.Font = Enum.Font.SourceSansBold
 titleLabel.TextScaled = true
 titleLabel.Text = "Devon's Menu (BETA)"
-titleLabel.Parent = dragFrame
+titleLabel.Parent = frame
 titleLabel.ZIndex = 25
+
+-- Collapse / Expand menu
+local function resetCheats()
+    hitboxEnabled, followEnabled, flyEnabled, noclipEnabled = false, false, false, false
+end
+
+local function setMenuState(open)
+    menuOpen = open
+    if open then
+        frame.Size = UDim2.new(0, 220, 0, 400)
+    else
+        frame.Size = UDim2.new(0, 220, 0, 30) -- only title visible
+        resetCheats()
+    end
+
+    for _, child in ipairs(frame:GetChildren()) do
+        if child ~= titleLabel then
+            child.Visible = open
+        end
+    end
+end
+
+titleLabel.MouseButton1Click:Connect(function()
+    local now = tick()
+    if now - lastClickTime < 0.3 then -- double click
+        setMenuState(not menuOpen)
+    end
+    lastClickTime = now
+end)
+
+-- Start expanded
+setMenuState(true)
 
 -- Buttons
 local function createButton(name, posY)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(0,180,0,40)
-    btn.Position = UDim2.new(0,10,0,posY)
+    btn.Position = UDim2.new(0,20,0,posY)
     btn.BackgroundColor3 = Color3.fromRGB(200,0,0)
     btn.TextColor3 = Color3.new(1,1,1)
     btn.Text = name
@@ -82,12 +104,14 @@ local hitboxButton = createButton("Hitbox: OFF", 40)
 local followButton = createButton("Follow: OFF", 90)
 local flyButton = createButton("Fly: OFF", 140)
 local noclipButton = createButton("NoClip: OFF", 190)
+local killAllButton = createButton("Kill All Zombies", 240)
+killAllButton.BackgroundColor3 = Color3.fromRGB(255,165,0) -- orange
 
 -- Sliders
 local function createSlider(labelText, posY, minVal, maxVal, isSpeed)
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(0,180,0,20)
-    label.Position = UDim2.new(0,10,0,posY)
+    label.Position = UDim2.new(0,20,0,posY)
     label.BackgroundTransparency = 1
     label.TextColor3 = Color3.new(1,1,1)
     label.Text = labelText
@@ -96,7 +120,7 @@ local function createSlider(labelText, posY, minVal, maxVal, isSpeed)
 
     local sliderFrame = Instance.new("Frame")
     sliderFrame.Size = UDim2.new(0,180,0,20)
-    sliderFrame.Position = UDim2.new(0,10,0,posY+20)
+    sliderFrame.Position = UDim2.new(0,20,0,posY+20)
     sliderFrame.BackgroundColor3 = Color3.fromRGB(100,100,100)
     sliderFrame.Parent = frame
     sliderFrame.ZIndex = 10
@@ -142,69 +166,11 @@ local function createSlider(labelText, posY, minVal, maxVal, isSpeed)
             end
         end
     end)
-
-    return label, sliderFrame, knob, fill
 end
 
-local speedLabel, speedFrame = createSlider("Follow Speed: 0.15", 240, 0.05, 0.5, true)
-local heightLabel, heightFrame = createSlider("Follow Height: 1", 280, 1, 100, false)
-local sizeLabel, sizeFrame = createSlider("Hitbox Size: 20", 320, 5, 100, false)
-
--- Collapse/expand
-local function collapseMenu()
-    hitboxButton.Visible = false
-    followButton.Visible = false
-    flyButton.Visible = false
-    noclipButton.Visible = false
-    speedLabel.Visible = false
-    speedFrame.Visible = false
-    heightLabel.Visible = false
-    heightFrame.Visible = false
-    sizeLabel.Visible = false
-    sizeFrame.Visible = false
-
-    TweenService:Create(frame, TweenInfo.new(0.3), {Size=UDim2.new(0,220,0,30)}):Play()
-
-    hitboxEnabled=false
-    followEnabled=false
-    flyEnabled=false
-    noclipEnabled=false
-
-    local function updateBtn(btn,state,name)
-        btn.Text = name..(state and ": ON" or ": OFF")
-        btn.BackgroundColor3 = state and Color3.fromRGB(0,200,0) or Color3.fromRGB(200,0,0)
-    end
-    updateBtn(hitboxButton, hitboxEnabled,"Hitbox")
-    updateBtn(followButton, followEnabled,"Follow")
-    updateBtn(flyButton, flyEnabled,"Fly")
-    updateBtn(noclipButton, noclipEnabled,"NoClip")
-end
-
-local function expandMenu()
-    hitboxButton.Visible = true
-    followButton.Visible = true
-    flyButton.Visible = true
-    noclipButton.Visible = true
-    speedLabel.Visible = true
-    speedFrame.Visible = true
-    heightLabel.Visible = true
-    heightFrame.Visible = true
-    sizeLabel.Visible = true
-    sizeFrame.Visible = true
-
-    TweenService:Create(frame, TweenInfo.new(0.3), {Size=UDim2.new(0,220,0,400)}):Play()
-end
-
-titleLabel.InputBegan:Connect(function(input)
-    if input.UserInputType==Enum.UserInputType.MouseButton1 then
-        local now = tick()
-        if now-lastClickTime<0.3 then
-            if menuOpen then collapseMenu() else expandMenu() end
-            menuOpen = not menuOpen
-        end
-        lastClickTime = now
-    end
-end)
+createSlider("Follow Speed: 0.15", 280, 0.05, 0.5, true)
+createSlider("Follow Height: 1", 320, 1, 100, false)
+createSlider("Hitbox Size: 20", 360, 5, 100, false)
 
 -- Update button colors
 local function updateButton(btn,state,name)
@@ -228,26 +194,25 @@ noclipButton.MouseButton1Click:Connect(function()
     noclipEnabled = not noclipEnabled
     updateButton(noclipButton,noclipEnabled,"NoClip")
 end)
-
---// Keys for fly
-local keys = {W=false,A=false,S=false,D=false,Space=false,LeftShift=false}
-UserInputService.InputBegan:Connect(function(input,gp)
-    if not gp then
-        if input.KeyCode==Enum.KeyCode.W then keys.W=true end
-        if input.KeyCode==Enum.KeyCode.A then keys.A=true end
-        if input.KeyCode==Enum.KeyCode.S then keys.S=true end
-        if input.KeyCode==Enum.KeyCode.D then keys.D=true end
-        if input.KeyCode==Enum.KeyCode.Space then keys.Space=true end
-        if input.KeyCode==Enum.KeyCode.LeftShift then keys.LeftShift=true end
+killAllButton.MouseButton1Click:Connect(function()
+    local zombieStorage = workspace:FindFirstChild("Zombie Storage")
+    if zombieStorage then
+        for _, z in ipairs(zombieStorage:GetChildren()) do
+            local hum = z:FindFirstChildWhichIsA("Humanoid")
+            if hum and hum.Health > 0 then
+                hum:TakeDamage(9999) -- ✅ ensures you get XP
+            end
+        end
     end
 end)
+
+--// Fly keys
+local keys = {W=false,A=false,S=false,D=false,Space=false,LeftShift=false}
+UserInputService.InputBegan:Connect(function(input,gp)
+    if not gp and keys[input.KeyCode.Name]~=nil then keys[input.KeyCode.Name]=true end
+end)
 UserInputService.InputEnded:Connect(function(input)
-    if input.KeyCode==Enum.KeyCode.W then keys.W=false end
-    if input.KeyCode==Enum.KeyCode.A then keys.A=false end
-    if input.KeyCode==Enum.KeyCode.S then keys.S=false end
-    if input.KeyCode==Enum.KeyCode.D then keys.D=false end
-    if input.KeyCode==Enum.KeyCode.Space then keys.Space=false end
-    if input.KeyCode==Enum.KeyCode.LeftShift then keys.LeftShift=false end
+    if keys[input.KeyCode.Name]~=nil then keys[input.KeyCode.Name]=false end
 end)
 
 --// Zombie Storage (Hitbox + Follow)
@@ -270,14 +235,14 @@ RunService.RenderStepped:Connect(function()
         local cam = workspace.CurrentCamera
         local lookVector = cam.CFrame.LookVector
         local rightVector = cam.CFrame.RightVector
-        local moveDir = Vector3.new(0,0,0)
-        if keys.W then moveDir = moveDir + lookVector end
-        if keys.S then moveDir = moveDir - lookVector end
-        if keys.A then moveDir = moveDir - rightVector end
-        if keys.D then moveDir = moveDir + rightVector end
-        if keys.Space then moveDir = moveDir + Vector3.new(0,1,0) end
-        if keys.LeftShift then moveDir = moveDir - Vector3.new(0,1,0) end
-        if moveDir.Magnitude>0 then moveDir=moveDir.Unit*flySpeed else moveDir=Vector3.new(0,0,0) end
+        local moveDir = Vector3.new()
+        if keys.W then moveDir += lookVector end
+        if keys.S then moveDir -= lookVector end
+        if keys.A then moveDir -= rightVector end
+        if keys.D then moveDir += rightVector end
+        if keys.Space then moveDir += Vector3.new(0,1,0) end
+        if keys.LeftShift then moveDir -= Vector3.new(0,1,0) end
+        if moveDir.Magnitude>0 then moveDir=moveDir.Unit*flySpeed end
         bodyVel.Velocity=moveDir
         bodyGyro.CFrame=CFrame.new(humRoot.Position, humRoot.Position + cam.CFrame.LookVector)
     else
@@ -294,12 +259,12 @@ RunService.RenderStepped:Connect(function()
 
     -- Follow nearest zombie
     if followEnabled and humRoot then
-        local closestZombie, closestDist = nil, math.huge
+        local closestZombie, closestDist
         for _, z in ipairs(zombieStorage:GetChildren()) do
             local hrp = z:FindFirstChild("HumanoidRootPart")
             if hrp then
                 local dist = (hrp.Position - humRoot.Position).Magnitude
-                if dist < closestDist then
+                if not closestDist or dist < closestDist then
                     closestDist = dist
                     closestZombie = hrp
                 end
@@ -331,7 +296,7 @@ RunService.RenderStepped:Connect(function()
                     hb.Parent = z
                     hb.Touched:Connect(function(hit)
                         if hit.Parent == char or hit.Parent:FindFirstChildWhichIsA("Tool") then
-                            hum:TakeDamage(1)
+                            hum:TakeDamage(5) -- ✅ damage counts for XP
                         end
                     end)
                 end
