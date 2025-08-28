@@ -1,4 +1,4 @@
---// Services
+--// Services 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -70,7 +70,7 @@ local function setMenuState(open)
         end
     end
 end
-local lastClickTime = 0
+lastClickTime = 0
 titleLabel.MouseButton1Click:Connect(function()
     local now = tick()
     if now - lastClickTime < 0.3 then
@@ -216,17 +216,26 @@ noclipButton.MouseButton1Click:Connect(function()
     noclipEnabled = not noclipEnabled
     updateButton(noclipButton,noclipEnabled,"NoClip")
 end)
+
+--// FIXED Kill All Zombies
 killAllButton.MouseButton1Click:Connect(function()
-    local zombieStorage = workspace:FindFirstChild("Zombie Storage")
-    if zombieStorage then
-        for _, z in ipairs(zombieStorage:GetChildren()) do
-            local hum = z:FindFirstChildWhichIsA("Humanoid")
-            if hum and hum.Health > 0 then
-                hum:TakeDamage(9999)
+    local function killHumanoids(parent)
+        for _, obj in ipairs(parent:GetChildren()) do
+            if obj:IsA("Model") then
+                local hum = obj:FindFirstChildWhichIsA("Humanoid")
+                if hum and hum.Health > 0 then
+                    hum:TakeDamage(hum.MaxHealth)
+                end
+                killHumanoids(obj)
             end
         end
     end
+    local zombieStorage = workspace:FindFirstChild("Zombie Storage")
+    if zombieStorage then
+        killHumanoids(zombieStorage)
+    end
 end)
+
 rapidFireButton.MouseButton1Click:Connect(function()
     rapidFireEnabled = not rapidFireEnabled
     updateButton(rapidFireButton, rapidFireEnabled, "Rapid Fire")
@@ -243,7 +252,7 @@ mouse.Button1Down:Connect(function()
             if tool and tool:FindFirstChild("Handle") then
                 pcall(function() tool:Activate() end)
             end
-            task.wait(0.01) -- ✅ extremely fast
+            task.wait(0.01)
         end
     end
 end)
