@@ -140,6 +140,12 @@ local function createButton(name, posY, color)
     btn.TextScaled = true
     btn.Parent = frame
     btn.ZIndex = 10
+
+    -- Rounded corners
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0,15) -- Adjust radius as you like
+    corner.Parent = btn
+
     return btn
 end
 
@@ -150,6 +156,7 @@ local noclipButton    = createButton("NoClip: OFF", 190)
 local killAllButton   = createButton("Kill All Zombies", 240, Color3.fromRGB(255,165,0))
 local rapidFireButton = createButton("Rapid Fire: OFF", 290)
 local lowQualityButton= createButton("Low Quality: OFF", 340, Color3.fromRGB(100,100,100))
+
 
 -- Sliders (Polished Version)
 local function createSlider(labelText, posY, minVal, maxVal, callback)
