@@ -146,7 +146,7 @@ local killAllButton   = createButton("Kill All Zombies", 240, Color3.fromRGB(255
 local rapidFireButton = createButton("Rapid Fire: OFF", 290)
 local lowQualityButton= createButton("Low Quality: OFF", 340, Color3.fromRGB(100,100,100))
 
--- Sliders
+-- Sliders (Polished Version)
 local function createSlider(labelText, posY, minVal, maxVal, callback)
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(0,200,0,20)
@@ -165,21 +165,30 @@ local function createSlider(labelText, posY, minVal, maxVal, callback)
     sliderFrame.BackgroundColor3 = Color3.fromRGB(70,70,70)
     sliderFrame.Parent = frame
     sliderFrame.ZIndex = 10
+    local sliderCorner = Instance.new("UICorner")
+    sliderCorner.CornerRadius = UDim.new(0,15)
+    sliderCorner.Parent = sliderFrame
 
     local fill = Instance.new("Frame")
     fill.Size = UDim2.new(0,0,1,0)
     fill.BackgroundColor3 = Color3.fromRGB(0,200,0)
     fill.Parent = sliderFrame
     fill.ZIndex = 11
+    local fillCorner = Instance.new("UICorner")
+    fillCorner.CornerRadius = UDim.new(0,15)
+    fillCorner.Parent = fill
 
     local knob = Instance.new("TextButton")
-    knob.Size = UDim2.new(0,20,1,0)
+    knob.Size = UDim2.new(0,18,1,0)
     knob.Position = UDim2.new(0,0,0,0)
     knob.BackgroundColor3 = Color3.fromRGB(255,255,255)
     knob.Text = ""
     knob.Parent = sliderFrame
     knob.AutoButtonColor = false
     knob.ZIndex = 12
+    local knobCorner = Instance.new("UICorner")
+    knobCorner.CornerRadius = UDim.new(0,15)
+    knobCorner.Parent = knob
 
     local dragging = false
     local value = minVal
@@ -193,13 +202,14 @@ local function createSlider(labelText, posY, minVal, maxVal, callback)
         if dragging then
             local mouseX = math.clamp(UserInputService:GetMouseLocation().X - sliderFrame.AbsolutePosition.X, 0, sliderFrame.AbsoluteSize.X)
             fill.Size = UDim2.new(0, mouseX, 1, 0)
-            knob.Position = UDim2.new(0, mouseX - knob.AbsoluteSize.X/2, 0, 0)
+            knob.Position = UDim2.new(0, math.clamp(mouseX - knob.AbsoluteSize.X/2, 0, sliderFrame.AbsoluteSize.X - knob.AbsoluteSize.X), 0, 0)
             value = minVal + (mouseX/sliderFrame.AbsoluteSize.X)*(maxVal-minVal)
             callback(value)
             label.Text = labelText:match(".*:").." "..string.format("%.2f", value)
         end
     end)
 end
+
 
 createSlider("Follow Speed: 0.15", 390, 0.05, 0.5, function(v) followSpeed = v end)
 createSlider("Follow Height: 1", 430, 1, 100, function(v) followOffset = v end)
