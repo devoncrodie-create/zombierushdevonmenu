@@ -5,7 +5,7 @@ local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 
 --// State
-local hitboxEnabled, followEnabled, flyEnabled, noclipEnabled, rapidFireEnabled = false, false, false, false, false
+local hitboxEnabled, followEnabled, flyEnabled, noclipEnabled, rapidFireEnabled, lowQualityEnabled = false, false, false, false, false, false
 local menuOpen = true
 local lastClickTime = 0
 local followSpeed = 0.15
@@ -13,6 +13,7 @@ local followOffset = 1
 local hitboxSize = Vector3.new(20,20,20)
 local flySpeed = 50
 local char, humRoot, humanoid, bodyVel, bodyGyro
+local originalParts = {}
 
 -- Handle respawn
 local function onCharacterAdded(character)
@@ -35,7 +36,7 @@ screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
 -- Main frame
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 220, 0, 440)
+frame.Size = UDim2.new(0, 250, 0, 520)
 frame.Position = UDim2.new(0.05,0,0.05,0)
 frame.BackgroundColor3 = Color3.fromRGB(40,40,40)
 frame.BorderSizePixel = 0
@@ -48,20 +49,40 @@ titleLabel.BackgroundColor3 = Color3.fromRGB(50,50,50)
 titleLabel.TextColor3 = Color3.new(1,1,1)
 titleLabel.Font = Enum.Font.SourceSansBold
 titleLabel.TextScaled = true
-titleLabel.Text = "Devon's Menu (BETA)"
+titleLabel.Text = "Devon's Menu (V12)"
 titleLabel.Parent = frame
 titleLabel.ZIndex = 25
 
+-- Rainbow Title
+spawn(function()
+    local hue = 0
+    while true do
+        hue = (hue + 0.005) % 1
+        titleLabel.TextColor3 = Color3.fromHSV(hue,1,1)
+        RunService.RenderStepped:Wait()
+    end
+end)
+
+-- Rainbow Background
+spawn(function()
+    local hue = 0
+    while true do
+        hue = (hue + 0.002) % 1
+        frame.BackgroundColor3 = Color3.fromHSV(hue,0.6,0.8)
+        RunService.RenderStepped:Wait()
+    end
+end)
+
 -- Collapse / Expand menu
 local function resetCheats()
-    hitboxEnabled, followEnabled, flyEnabled, noclipEnabled, rapidFireEnabled = false, false, false, false, false
+    hitboxEnabled, followEnabled, flyEnabled, noclipEnabled, rapidFireEnabled, lowQualityEnabled = false, false, false, false, false, false
 end
 local function setMenuState(open)
     menuOpen = open
     if open then
-        frame.Size = UDim2.new(0, 220, 0, 440)
+        frame.Size = UDim2.new(0, 250, 0, 520)
     else
-        frame.Size = UDim2.new(0, 220, 0, 30)
+        frame.Size = UDim2.new(0, 250, 0, 30)
         resetCheats()
     end
     for _, child in ipairs(frame:GetChildren()) do
@@ -80,7 +101,7 @@ titleLabel.MouseButton1Click:Connect(function()
 end)
 setMenuState(true)
 
---✅ Proper draggable menu
+--✅ Draggable menu
 local dragging, dragStart, startPos, dragInput = false, nil, nil, nil
 titleLabel.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -88,35 +109,30 @@ titleLabel.InputBegan:Connect(function(input)
         dragStart = input.Position
         startPos = frame.Position
         input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
+            if input.UserInputState == Enum.UserInputState.End then dragging=false end
         end)
     end
 end)
 titleLabel.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement then
-        dragInput = input
-    end
+    if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end
 end)
 UserInputService.InputChanged:Connect(function(input)
     if dragging and input == dragInput then
         local delta = input.Position - dragStart
-        frame.Position = UDim2.new(
-            startPos.X.Scale, startPos.X.Offset + delta.X,
-            startPos.Y.Scale, startPos.Y.Offset + delta.Y
-        )
+        frame.Position = UDim2.new(startPos.X.Scale,startPos.X.Offset+delta.X,startPos.Y.Scale,startPos.Y.Offset+delta.Y)
     end
 end)
 
 -- Buttons
 local function createButton(name, posY, color)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0,180,0,40)
-    btn.Position = UDim2.new(0,20,0,posY)
+    btn.Size = UDim2.new(0,200,0,40)
+    btn.Position = UDim2.new(0,25,0,posY)
     btn.BackgroundColor3 = color or Color3.fromRGB(200,0,0)
     btn.TextColor3 = Color3.new(1,1,1)
     btn.Text = name
+    btn.Font = Enum.Font.GothamBold
+    btn.TextScaled = true
     btn.Parent = frame
     btn.ZIndex = 10
     return btn
@@ -128,22 +144,25 @@ local flyButton       = createButton("Fly: OFF", 140)
 local noclipButton    = createButton("NoClip: OFF", 190)
 local killAllButton   = createButton("Kill All Zombies", 240, Color3.fromRGB(255,165,0))
 local rapidFireButton = createButton("Rapid Fire: OFF", 290)
+local lowQualityButton= createButton("Low Quality: OFF", 340, Color3.fromRGB(100,100,100))
 
 -- Sliders
-local function createSlider(labelText, posY, minVal, maxVal, isSpeed)
+local function createSlider(labelText, posY, minVal, maxVal, callback)
     local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(0,180,0,20)
-    label.Position = UDim2.new(0,20,0,posY)
+    label.Size = UDim2.new(0,200,0,20)
+    label.Position = UDim2.new(0,25,0,posY)
     label.BackgroundTransparency = 1
     label.TextColor3 = Color3.new(1,1,1)
+    label.Font = Enum.Font.Gotham
+    label.TextScaled = true
     label.Text = labelText
     label.Parent = frame
     label.ZIndex = 10
 
     local sliderFrame = Instance.new("Frame")
-    sliderFrame.Size = UDim2.new(0,180,0,20)
-    sliderFrame.Position = UDim2.new(0,20,0,posY+20)
-    sliderFrame.BackgroundColor3 = Color3.fromRGB(100,100,100)
+    sliderFrame.Size = UDim2.new(0,200,0,20)
+    sliderFrame.Position = UDim2.new(0,25,0,posY+20)
+    sliderFrame.BackgroundColor3 = Color3.fromRGB(70,70,70)
     sliderFrame.Parent = frame
     sliderFrame.ZIndex = 10
 
@@ -167,7 +186,7 @@ local function createSlider(labelText, posY, minVal, maxVal, isSpeed)
 
     knob.MouseButton1Down:Connect(function() dragging = true end)
     UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging=false end
+        if input.UserInputType==Enum.UserInputType.MouseButton1 then dragging=false end
     end)
 
     RunService.RenderStepped:Connect(function()
@@ -176,23 +195,15 @@ local function createSlider(labelText, posY, minVal, maxVal, isSpeed)
             fill.Size = UDim2.new(0, mouseX, 1, 0)
             knob.Position = UDim2.new(0, mouseX - knob.AbsoluteSize.X/2, 0, 0)
             value = minVal + (mouseX/sliderFrame.AbsoluteSize.X)*(maxVal-minVal)
-            if isSpeed then
-                followSpeed = value
-                label.Text = "Follow Speed: "..string.format("%.2f", value)
-            elseif labelText:find("Height") then
-                followOffset = value
-                label.Text = "Follow Height: "..string.format("%.1f", value)
-            else
-                hitboxSize = Vector3.new(value,value,value)
-                label.Text = "Hitbox Size: "..string.format("%.1f", value)
-            end
+            callback(value)
+            label.Text = labelText:match(".*:").." "..string.format("%.2f", value)
         end
     end)
 end
 
-createSlider("Follow Speed: 0.15", 340, 0.05, 0.5, true)
-createSlider("Follow Height: 1", 380, 1, 100, false)
-createSlider("Hitbox Size: 20", 420, 5, 100, false)
+createSlider("Follow Speed: 0.15", 390, 0.05, 0.5, function(v) followSpeed = v end)
+createSlider("Follow Height: 1", 430, 1, 100, function(v) followOffset = v end)
+createSlider("Hitbox Size: 20", 470, 5, 100, function(v) hitboxSize = Vector3.new(v,v,v) end)
 
 -- Update button colors
 local function updateButton(btn,state,name)
@@ -216,32 +227,45 @@ noclipButton.MouseButton1Click:Connect(function()
     noclipEnabled = not noclipEnabled
     updateButton(noclipButton,noclipEnabled,"NoClip")
 end)
-
---// FIXED Kill All Zombies
-killAllButton.MouseButton1Click:Connect(function()
-    local function killHumanoids(parent)
-        for _, obj in ipairs(parent:GetChildren()) do
-            if obj:IsA("Model") then
-                local hum = obj:FindFirstChildWhichIsA("Humanoid")
-                if hum and hum.Health > 0 then
-                    hum:TakeDamage(hum.MaxHealth)
-                end
-                killHumanoids(obj)
-            end
-        end
-    end
-    local zombieStorage = workspace:FindFirstChild("Zombie Storage")
-    if zombieStorage then
-        killHumanoids(zombieStorage)
-    end
-end)
-
 rapidFireButton.MouseButton1Click:Connect(function()
     rapidFireEnabled = not rapidFireEnabled
     updateButton(rapidFireButton, rapidFireEnabled, "Rapid Fire")
 end)
+lowQualityButton.MouseButton1Click:Connect(function()
+    lowQualityEnabled = not lowQualityEnabled
+    updateButton(lowQualityButton, lowQualityEnabled, "Low Quality")
+    if lowQualityEnabled then
+        originalParts = {}
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if obj:IsA("BasePart") and obj.Parent ~= char then
+                originalParts[obj] = {obj.Material, obj.Color}
+                obj.Material = Enum.Material.SmoothPlastic
+                obj.Color = Color3.fromRGB(127,127,127)
+            end
+        end
+    else
+        for obj, props in pairs(originalParts) do
+            if obj and obj.Parent then
+                obj.Material = props[1]
+                obj.Color = props[2]
+            end
+        end
+        originalParts = {}
+    end
+end)
 
---// Rapid Fire (ultra fast)
+-- Kill All Zombies
+killAllButton.MouseButton1Click:Connect(function()
+    local zombieStorage = workspace:FindFirstChild("Zombie Storage")
+    if zombieStorage then
+        for _, z in ipairs(zombieStorage:GetChildren()) do
+            local hum = z:FindFirstChildWhichIsA("Humanoid")
+            if hum then hum.Health = 0 end
+        end
+    end
+end)
+
+-- Rapid Fire logic
 local mouse = player:GetMouse()
 local firing = false
 mouse.Button1Down:Connect(function()
@@ -249,18 +273,14 @@ mouse.Button1Down:Connect(function()
         firing = true
         while firing and rapidFireEnabled do
             local tool = char:FindFirstChildOfClass("Tool")
-            if tool and tool:FindFirstChild("Handle") then
-                pcall(function() tool:Activate() end)
-            end
+            if tool and tool:FindFirstChild("Handle") then pcall(function() tool:Activate() end) end
             task.wait(0.01)
         end
     end
 end)
-mouse.Button1Up:Connect(function()
-    firing = false
-end)
+mouse.Button1Up:Connect(function() firing=false end)
 
---// Fly + Follow + NoClip + Hitbox logic
+-- Movement keys
 local keys = {W=false,A=false,S=false,D=false,Space=false,LeftShift=false}
 UserInputService.InputBegan:Connect(function(input,gp)
     if not gp and keys[input.KeyCode.Name]~=nil then keys[input.KeyCode.Name]=true end
@@ -271,6 +291,7 @@ end)
 
 local zombieStorage = workspace:WaitForChild("Zombie Storage")
 
+-- RenderStepped logic
 RunService.RenderStepped:Connect(function()
     -- Fly
     if flyEnabled and humRoot then
@@ -284,7 +305,6 @@ RunService.RenderStepped:Connect(function()
             bodyGyro.MaxTorque = Vector3.new(1e5,1e5,1e5)
             bodyGyro.Parent = humRoot
         end
-
         local cam = workspace.CurrentCamera
         local lookVector = cam.CFrame.LookVector
         local rightVector = cam.CFrame.RightVector
@@ -358,6 +378,10 @@ RunService.RenderStepped:Connect(function()
             elseif hb then
                 hb:Destroy()
             end
+        end
+    end
+end)
+
         end
     end
 end)
