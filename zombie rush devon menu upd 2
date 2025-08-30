@@ -3,6 +3,7 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local TeleportService = game:GetService("TeleportService")
+local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
 
 --// State
@@ -37,7 +38,7 @@ screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
 -- Main frame
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 250, 0, 550)
+frame.Size = UDim2.new(0, 250, 0, 700)
 frame.Position = UDim2.new(0.05,0,0.05,0)
 frame.BackgroundColor3 = Color3.fromRGB(40,40,40)
 frame.BorderSizePixel = 0
@@ -57,7 +58,7 @@ titleLabel.BackgroundTransparency = 1
 titleLabel.TextColor3 = Color3.new(1,1,1)
 titleLabel.Font = Enum.Font.SourceSansBold
 titleLabel.TextScaled = true
-titleLabel.Text = "Unitpoop2 Menu (V12)"
+titleLabel.Text = "Devon's Menu (V12)"
 titleLabel.Parent = titleFrame
 titleLabel.ZIndex = 25
 
@@ -90,25 +91,29 @@ spawn(function()
     end
 end)
 
--- Collapse / Expand menu
+-- Collapse / Expand menu with smooth animation
+local collapsedSize = UDim2.new(0,250,0,50)
+local expandedSize = UDim2.new(0,250,0,700)
+local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+
 local function resetCheats()
     hitboxEnabled, followEnabled, flyEnabled, noclipEnabled, rapidFireEnabled, lowQualityEnabled = false, false, false, false, false, false
 end
+
 local function setMenuState(open)
     menuOpen = open
-    if open then
-        frame.Size = UDim2.new(0, 250, 0, 550)
-    else
-        frame.Size = UDim2.new(0, 250, 0, 50)
-        resetCheats()
-    end
+    local targetSize = open and expandedSize or collapsedSize
+    local tween = TweenService:Create(frame, tweenInfo, {Size = targetSize})
+    tween:Play()
+    if not open then resetCheats() end
     for _, child in ipairs(frame:GetChildren()) do
         if child ~= titleFrame then
             child.Visible = open
         end
     end
 end
-lastClickTime = 0
+
+-- Double click to collapse/expand
 titleFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         local now = tick()
@@ -118,7 +123,6 @@ titleFrame.InputBegan:Connect(function(input)
         lastClickTime = now
     end
 end)
-setMenuState(true)
 
 -- Draggable menu
 local dragging, dragStart, startPos, dragInput = false, nil, nil, nil
@@ -165,17 +169,6 @@ local killAllButton   = createButton("Kill All Zombies", 260, Color3.fromRGB(255
 local rapidFireButton = createButton("Rapid Fire: OFF", 310)
 local lowQualityButton= createButton("Low Quality: OFF", 360, Color3.fromRGB(100,100,100))
 local rejoinButton    = createButton("Rejoin Server", 410, Color3.fromRGB(0,170,255))
-
--- Right Ctrl info
-local infoLabel = Instance.new("TextLabel")
-infoLabel.Size = UDim2.new(1,0,0,20)
-infoLabel.Position = UDim2.new(0,0,0,500)
-infoLabel.BackgroundTransparency = 1
-infoLabel.TextColor3 = Color3.new(1,1,1)
-infoLabel.Font = Enum.Font.Gotham
-infoLabel.TextScaled = true
-infoLabel.Text = "Press Right Ctrl to close menu"
-infoLabel.Parent = frame
 
 -- Update button colors
 local function updateButton(btn,state,name)
@@ -314,13 +307,6 @@ UserInputService.InputBegan:Connect(function(input,gp)
 end)
 UserInputService.InputEnded:Connect(function(input)
     if keys[input.KeyCode.Name]~=nil then keys[input.KeyCode.Name]=false end
-end)
-
--- Close menu with Right Ctrl
-UserInputService.InputBegan:Connect(function(input)
-    if input.KeyCode == Enum.KeyCode.RightControl then
-        frame.Visible = not frame.Visible
-    end
 end)
 
 local zombieStorage = workspace:WaitForChild("Zombie Storage")
