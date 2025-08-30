@@ -1,7 +1,8 @@
---// Services 
+--// Services
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local TeleportService = game:GetService("TeleportService")
 local player = Players.LocalPlayer
 
 --// State
@@ -36,27 +37,38 @@ screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
 -- Main frame
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 300, 0, 520)
+frame.Size = UDim2.new(0, 250, 0, 550)
 frame.Position = UDim2.new(0.05,0,0.05,0)
 frame.BackgroundColor3 = Color3.fromRGB(40,40,40)
 frame.BorderSizePixel = 0
 frame.Parent = screenGui
 
--- Rounded corners
-local frameCorner = Instance.new("UICorner")
-frameCorner.CornerRadius = UDim.new(0,20) -- make the background nicely rounded
-frameCorner.Parent = frame
+-- Title frame
+local titleFrame = Instance.new("Frame")
+titleFrame.Size = UDim2.new(1,0,0,50)
+titleFrame.BackgroundColor3 = Color3.fromRGB(50,50,50)
+titleFrame.Parent = frame
 
--- Title (TextButton for dragging & double click)
-local titleLabel = Instance.new("TextButton")
-titleLabel.Size = UDim2.new(1,0,0,30)
-titleLabel.BackgroundColor3 = Color3.fromRGB(50,50,50)
+-- Title label
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size = UDim2.new(1,-50,1,0)
+titleLabel.Position = UDim2.new(0,0,0,0)
+titleLabel.BackgroundTransparency = 1
 titleLabel.TextColor3 = Color3.new(1,1,1)
 titleLabel.Font = Enum.Font.SourceSansBold
 titleLabel.TextScaled = true
 titleLabel.Text = "Devon's Menu (V12)"
-titleLabel.Parent = frame
+titleLabel.Parent = titleFrame
 titleLabel.ZIndex = 25
+
+-- Image beside title
+local imageLabel = Instance.new("ImageLabel")
+imageLabel.Size = UDim2.new(0,50,1,0)
+imageLabel.Position = UDim2.new(1,-50,0,0)
+imageLabel.BackgroundTransparency = 1
+imageLabel.Image = "rbxassetid://101455013322456"
+imageLabel.Parent = titleFrame
+imageLabel.ZIndex = 25
 
 -- Rainbow Title
 spawn(function()
@@ -85,30 +97,32 @@ end
 local function setMenuState(open)
     menuOpen = open
     if open then
-        frame.Size = UDim2.new(0, 250, 0, 520)
+        frame.Size = UDim2.new(0, 250, 0, 550)
     else
-        frame.Size = UDim2.new(0, 250, 0, 30)
+        frame.Size = UDim2.new(0, 250, 0, 50)
         resetCheats()
     end
     for _, child in ipairs(frame:GetChildren()) do
-        if child ~= titleLabel then
+        if child ~= titleFrame then
             child.Visible = open
         end
     end
 end
 lastClickTime = 0
-titleLabel.MouseButton1Click:Connect(function()
-    local now = tick()
-    if now - lastClickTime < 0.3 then
-        setMenuState(not menuOpen)
+titleFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        local now = tick()
+        if now - lastClickTime < 0.3 then
+            setMenuState(not menuOpen)
+        end
+        lastClickTime = now
     end
-    lastClickTime = now
 end)
 setMenuState(true)
 
---✅ Draggable menu
+-- Draggable menu
 local dragging, dragStart, startPos, dragInput = false, nil, nil, nil
-titleLabel.InputBegan:Connect(function(input)
+titleFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         dragging = true
         dragStart = input.Position
@@ -118,7 +132,7 @@ titleLabel.InputBegan:Connect(function(input)
         end)
     end
 end)
-titleLabel.InputChanged:Connect(function(input)
+titleFrame.InputChanged:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end
 end)
 UserInputService.InputChanged:Connect(function(input)
@@ -140,25 +154,92 @@ local function createButton(name, posY, color)
     btn.TextScaled = true
     btn.Parent = frame
     btn.ZIndex = 10
-
-    -- Rounded corners
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0,15) -- Adjust radius as you like
-    corner.Parent = btn
-
     return btn
 end
 
-local hitboxButton    = createButton("Hitbox: OFF", 40)
-local followButton    = createButton("Follow: OFF", 90)
-local flyButton       = createButton("Fly: OFF", 140)
-local noclipButton    = createButton("NoClip: OFF", 190)
-local killAllButton   = createButton("Kill All Zombies", 240, Color3.fromRGB(255,165,0))
-local rapidFireButton = createButton("Rapid Fire: OFF", 290)
-local lowQualityButton= createButton("Low Quality: OFF", 340, Color3.fromRGB(100,100,100))
+local hitboxButton    = createButton("Hitbox: OFF", 60)
+local followButton    = createButton("Follow: OFF", 110)
+local flyButton       = createButton("Fly: OFF", 160)
+local noclipButton    = createButton("NoClip: OFF", 210)
+local killAllButton   = createButton("Kill All Zombies", 260, Color3.fromRGB(255,165,0))
+local rapidFireButton = createButton("Rapid Fire: OFF", 310)
+local lowQualityButton= createButton("Low Quality: OFF", 360, Color3.fromRGB(100,100,100))
+local rejoinButton    = createButton("Rejoin Server", 410, Color3.fromRGB(0,170,255))
 
+-- Right Ctrl info
+local infoLabel = Instance.new("TextLabel")
+infoLabel.Size = UDim2.new(1,0,0,20)
+infoLabel.Position = UDim2.new(0,0,0,500)
+infoLabel.BackgroundTransparency = 1
+infoLabel.TextColor3 = Color3.new(1,1,1)
+infoLabel.Font = Enum.Font.Gotham
+infoLabel.TextScaled = true
+infoLabel.Text = "Press Right Ctrl to close menu"
+infoLabel.Parent = frame
 
--- Sliders (Polished Version)
+-- Update button colors
+local function updateButton(btn,state,name)
+    btn.Text = name..(state and ": ON" or ": OFF")
+    btn.BackgroundColor3 = state and Color3.fromRGB(0,200,0) or Color3.fromRGB(200,0,0)
+end
+
+-- Buttons logic
+hitboxButton.MouseButton1Click:Connect(function()
+    hitboxEnabled = not hitboxEnabled
+    updateButton(hitboxButton,hitboxEnabled,"Hitbox")
+end)
+followButton.MouseButton1Click:Connect(function()
+    followEnabled = not followEnabled
+    updateButton(followButton,followEnabled,"Follow")
+end)
+flyButton.MouseButton1Click:Connect(function()
+    flyEnabled = not flyEnabled
+    updateButton(flyButton,flyEnabled,"Fly")
+end)
+noclipButton.MouseButton1Click:Connect(function()
+    noclipEnabled = not noclipEnabled
+    updateButton(noclipButton,noclipEnabled,"NoClip")
+end)
+rapidFireButton.MouseButton1Click:Connect(function()
+    rapidFireEnabled = not rapidFireEnabled
+    updateButton(rapidFireButton, rapidFireEnabled, "Rapid Fire")
+end)
+lowQualityButton.MouseButton1Click:Connect(function()
+    lowQualityEnabled = not lowQualityEnabled
+    updateButton(lowQualityButton, lowQualityEnabled, "Low Quality")
+    if lowQualityEnabled then
+        originalParts = {}
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if obj:IsA("BasePart") and obj.Parent ~= char then
+                originalParts[obj] = {obj.Material, obj.Color}
+                obj.Material = Enum.Material.SmoothPlastic
+                obj.Color = Color3.fromRGB(127,127,127)
+            end
+        end
+    else
+        for obj, props in pairs(originalParts) do
+            if obj and obj.Parent then
+                obj.Material = props[1]
+                obj.Color = props[2]
+            end
+        end
+        originalParts = {}
+    end
+end)
+killAllButton.MouseButton1Click:Connect(function()
+    local zombieStorage = workspace:FindFirstChild("Zombie Storage")
+    if zombieStorage then
+        for _, z in ipairs(zombieStorage:GetChildren()) do
+            local hum = z:FindFirstChildWhichIsA("Humanoid")
+            if hum then hum.Health = 0 end
+        end
+    end
+end)
+rejoinButton.MouseButton1Click:Connect(function()
+    TeleportService:Teleport(game.PlaceId, player)
+end)
+
+-- Sliders
 local function createSlider(labelText, posY, minVal, maxVal, callback)
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(0,200,0,20)
@@ -222,74 +303,31 @@ local function createSlider(labelText, posY, minVal, maxVal, callback)
     end)
 end
 
+createSlider("Follow Speed: 0.15", 460, 0.05, 0.5, function(v) followSpeed = v end)
+createSlider("Follow Height: 1", 500, 1, 100, function(v) followOffset = v end)
+createSlider("Hitbox Size: 20", 540, 5, 100, function(v) hitboxSize = Vector3.new(v,v,v) end)
 
-createSlider("Follow Speed: 0.15", 390, 0.05, 0.5, function(v) followSpeed = v end)
-createSlider("Follow Height: 1", 430, 1, 100, function(v) followOffset = v end)
-createSlider("Hitbox Size: 20", 470, 5, 100, function(v) hitboxSize = Vector3.new(v,v,v) end)
+-- Movement keys
+local keys = {W=false,A=false,S=false,D=false,Space=false,LeftShift=false}
+UserInputService.InputBegan:Connect(function(input,gp)
+    if not gp and keys[input.KeyCode.Name]~=nil then keys[input.KeyCode.Name]=true end
+end)
+UserInputService.InputEnded:Connect(function(input)
+    if keys[input.KeyCode.Name]~=nil then keys[input.KeyCode.Name]=false end
+end)
 
--- Update button colors
-local function updateButton(btn,state,name)
-    btn.Text = name..(state and ": ON" or ": OFF")
-    btn.BackgroundColor3 = state and Color3.fromRGB(0,200,0) or Color3.fromRGB(200,0,0)
-end
-
-hitboxButton.MouseButton1Click:Connect(function()
-    hitboxEnabled = not hitboxEnabled
-    updateButton(hitboxButton,hitboxEnabled,"Hitbox")
-end)
-followButton.MouseButton1Click:Connect(function()
-    followEnabled = not followEnabled
-    updateButton(followButton,followEnabled,"Follow")
-end)
-flyButton.MouseButton1Click:Connect(function()
-    flyEnabled = not flyEnabled
-    updateButton(flyButton,flyEnabled,"Fly")
-end)
-noclipButton.MouseButton1Click:Connect(function()
-    noclipEnabled = not noclipEnabled
-    updateButton(noclipButton,noclipEnabled,"NoClip")
-end)
-rapidFireButton.MouseButton1Click:Connect(function()
-    rapidFireEnabled = not rapidFireEnabled
-    updateButton(rapidFireButton, rapidFireEnabled, "Rapid Fire")
-end)
-lowQualityButton.MouseButton1Click:Connect(function()
-    lowQualityEnabled = not lowQualityEnabled
-    updateButton(lowQualityButton, lowQualityEnabled, "Low Quality")
-    if lowQualityEnabled then
-        originalParts = {}
-        for _, obj in ipairs(workspace:GetDescendants()) do
-            if obj:IsA("BasePart") and obj.Parent ~= char then
-                originalParts[obj] = {obj.Material, obj.Color}
-                obj.Material = Enum.Material.SmoothPlastic
-                obj.Color = Color3.fromRGB(127,127,127)
-            end
-        end
-    else
-        for obj, props in pairs(originalParts) do
-            if obj and obj.Parent then
-                obj.Material = props[1]
-                obj.Color = props[2]
-            end
-        end
-        originalParts = {}
+-- Close menu with Right Ctrl
+UserInputService.InputBegan:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.RightControl then
+        frame.Visible = not frame.Visible
     end
 end)
 
--- Kill All Zombies
-killAllButton.MouseButton1Click:Connect(function()
-    local zombieStorage = workspace:FindFirstChild("Zombie Storage")
-    if zombieStorage then
-        for _, z in ipairs(zombieStorage:GetChildren()) do
-            local hum = z:FindFirstChildWhichIsA("Humanoid")
-            if hum then hum.Health = 0 end
-        end
-    end
-end)
-
--- Rapid Fire logic
+local zombieStorage = workspace:WaitForChild("Zombie Storage")
 local mouse = player:GetMouse()
 local firing = false
+
+-- Rapid fire
 mouse.Button1Down:Connect(function()
     if rapidFireEnabled then
         firing = true
@@ -302,18 +340,7 @@ mouse.Button1Down:Connect(function()
 end)
 mouse.Button1Up:Connect(function() firing=false end)
 
--- Movement keys
-local keys = {W=false,A=false,S=false,D=false,Space=false,LeftShift=false}
-UserInputService.InputBegan:Connect(function(input,gp)
-    if not gp and keys[input.KeyCode.Name]~=nil then keys[input.KeyCode.Name]=true end
-end)
-UserInputService.InputEnded:Connect(function(input)
-    if keys[input.KeyCode.Name]~=nil then keys[input.KeyCode.Name]=false end
-end)
-
-local zombieStorage = workspace:WaitForChild("Zombie Storage")
-
--- RenderStepped logic
+-- Main RenderStepped loop
 RunService.RenderStepped:Connect(function()
     -- Fly
     if flyEnabled and humRoot then
@@ -389,16 +416,10 @@ RunService.RenderStepped:Connect(function()
                     hb.BrickColor = BrickColor.new("Really red")
                     hb.Size = hitboxSize
                     hb.Parent = z
-                    hb.Touched:Connect(function(hit)
-                        if hit.Parent == char or hit.Parent:FindFirstChildWhichIsA("Tool") then
-                            hum:TakeDamage(5)
-                        end
-                    end)
                 end
-                hb.Size = hitboxSize
                 hb.CFrame = hrp.CFrame
-            elseif hb then
-                hb:Destroy()
+            else
+                if hb then hb:Destroy() end
             end
         end
     end
