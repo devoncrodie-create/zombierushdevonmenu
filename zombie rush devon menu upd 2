@@ -3,7 +3,6 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local TeleportService = game:GetService("TeleportService")
-local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
 
 --// State
@@ -38,7 +37,7 @@ screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
 -- Main frame
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 250, 0, 700)
+frame.Size = UDim2.new(0, 250, 0, 550)
 frame.Position = UDim2.new(0.05,0,0.05,0)
 frame.BackgroundColor3 = Color3.fromRGB(40,40,40)
 frame.BorderSizePixel = 0
@@ -46,13 +45,13 @@ frame.Parent = screenGui
 
 -- Title frame
 local titleFrame = Instance.new("Frame")
-titleFrame.Size = UDim2.new(1,0,0,50)
+titleFrame.Size = UDim2.new(1,0,0,60)
 titleFrame.BackgroundColor3 = Color3.fromRGB(50,50,50)
 titleFrame.Parent = frame
 
 -- Title label
 local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1,-50,1,0)
+titleLabel.Size = UDim2.new(1,-60,1,0)
 titleLabel.Position = UDim2.new(0,0,0,0)
 titleLabel.BackgroundTransparency = 1
 titleLabel.TextColor3 = Color3.new(1,1,1)
@@ -64,8 +63,8 @@ titleLabel.ZIndex = 25
 
 -- Image beside title
 local imageLabel = Instance.new("ImageLabel")
-imageLabel.Size = UDim2.new(0,50,1,0)
-imageLabel.Position = UDim2.new(1,-50,0,0)
+imageLabel.Size = UDim2.new(0,60,1,0)
+imageLabel.Position = UDim2.new(1,-60,0,0)
 imageLabel.BackgroundTransparency = 1
 imageLabel.Image = "rbxassetid://101455013322456"
 imageLabel.Parent = titleFrame
@@ -92,20 +91,11 @@ spawn(function()
 end)
 
 -- Collapse / Expand menu with smooth animation
-local collapsedSize = UDim2.new(0,250,0,50)
-local expandedSize = UDim2.new(0,250,0,700)
-local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-
-local function resetCheats()
-    hitboxEnabled, followEnabled, flyEnabled, noclipEnabled, rapidFireEnabled, lowQualityEnabled = false, false, false, false, false, false
-end
-
 local function setMenuState(open)
     menuOpen = open
-    local targetSize = open and expandedSize or collapsedSize
-    local tween = TweenService:Create(frame, tweenInfo, {Size = targetSize})
+    local targetSize = open and UDim2.new(0, 250, 0, 550) or UDim2.new(0,250,0,60)
+    local tween = game:GetService("TweenService"):Create(frame, TweenInfo.new(0.25), {Size = targetSize})
     tween:Play()
-    if not open then resetCheats() end
     for _, child in ipairs(frame:GetChildren()) do
         if child ~= titleFrame then
             child.Visible = open
@@ -113,7 +103,6 @@ local function setMenuState(open)
     end
 end
 
--- Double click to collapse/expand
 titleFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         local now = tick()
@@ -123,6 +112,7 @@ titleFrame.InputBegan:Connect(function(input)
         lastClickTime = now
     end
 end)
+setMenuState(true)
 
 -- Draggable menu
 local dragging, dragStart, startPos, dragInput = false, nil, nil, nil
@@ -161,14 +151,14 @@ local function createButton(name, posY, color)
     return btn
 end
 
-local hitboxButton    = createButton("Hitbox: OFF", 60)
-local followButton    = createButton("Follow: OFF", 110)
-local flyButton       = createButton("Fly: OFF", 160)
-local noclipButton    = createButton("NoClip: OFF", 210)
-local killAllButton   = createButton("Kill All Zombies", 260, Color3.fromRGB(255,165,0))
-local rapidFireButton = createButton("Rapid Fire: OFF", 310)
-local lowQualityButton= createButton("Low Quality: OFF", 360, Color3.fromRGB(100,100,100))
-local rejoinButton    = createButton("Rejoin Server", 410, Color3.fromRGB(0,170,255))
+local hitboxButton    = createButton("Hitbox: OFF", 70)
+local followButton    = createButton("Follow: OFF", 120)
+local flyButton       = createButton("Fly: OFF", 170)
+local noclipButton    = createButton("NoClip: OFF", 220)
+local killAllButton   = createButton("Kill All Zombies", 270, Color3.fromRGB(255,165,0))
+local rapidFireButton = createButton("Rapid Fire: OFF", 320)
+local lowQualityButton= createButton("Low Quality: OFF", 370, Color3.fromRGB(100,100,100))
+local rejoinButton    = createButton("Rejoin Server", 420, Color3.fromRGB(0,170,255))
 
 -- Update button colors
 local function updateButton(btn,state,name)
@@ -296,9 +286,9 @@ local function createSlider(labelText, posY, minVal, maxVal, callback)
     end)
 end
 
-createSlider("Follow Speed: 0.15", 460, 0.05, 0.5, function(v) followSpeed = v end)
-createSlider("Follow Height: 1", 500, 1, 100, function(v) followOffset = v end)
-createSlider("Hitbox Size: 20", 540, 5, 100, function(v) hitboxSize = Vector3.new(v,v,v) end)
+createSlider("Follow Speed: 0.15", 470, 0.05, 0.5, function(v) followSpeed = v end)
+createSlider("Follow Height: 1", 510, 1, 100, function(v) followOffset = v end)
+createSlider("Hitbox Size: 20", 550, 5, 100, function(v) hitboxSize = Vector3.new(v,v,v) end)
 
 -- Movement keys
 local keys = {W=false,A=false,S=false,D=false,Space=false,LeftShift=false}
@@ -398,11 +388,12 @@ RunService.RenderStepped:Connect(function()
                     hb.Name = "ZombieHitbox"
                     hb.Anchored = true
                     hb.CanCollide = false
-                    hb.Transparency = 0.5
-                    hb.BrickColor = BrickColor.new("Really red")
+                    hb.Transparency = 0.7
+                    hb.BrickColor = BrickColor.new("Bright red")
                     hb.Size = hitboxSize
                     hb.Parent = z
                 end
+                hb.Size = hitboxSize
                 hb.CFrame = hrp.CFrame
             else
                 if hb then hb:Destroy() end
